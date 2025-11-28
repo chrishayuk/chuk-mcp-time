@@ -258,9 +258,9 @@ async def get_local_time(
     return LocalTimeResponse(
         local_datetime=local_dt.isoformat(),
         timezone=timezone,
-        utc_offset_seconds=tz_info["utc_offset_seconds"],  # type: ignore[arg-type]
-        is_dst=tz_info["is_dst"],  # type: ignore[arg-type]
-        abbreviation=tz_info["abbreviation"],  # type: ignore[arg-type]
+        utc_offset_seconds=tz_info.utc_offset_seconds,
+        is_dst=tz_info.is_dst,
+        abbreviation=tz_info.abbreviation,
         source_utc=time_response.iso8601_time,
         tzdata_version=get_tzdata_version(),
         estimated_error_ms=time_response.estimated_error_ms,
@@ -289,14 +289,14 @@ async def convert_time(
     result = convert_datetime_between_timezones(datetime_str, from_timezone, to_timezone)
 
     return TimezoneConversionResponse(
-        from_timezone=result["from_timezone"],  # type: ignore[arg-type]
-        from_datetime=result["from_datetime"],  # type: ignore[arg-type]
-        from_utc_offset_seconds=result["from_utc_offset_seconds"],  # type: ignore[arg-type]
-        to_timezone=result["to_timezone"],  # type: ignore[arg-type]
-        to_datetime=result["to_datetime"],  # type: ignore[arg-type]
-        to_utc_offset_seconds=result["to_utc_offset_seconds"],  # type: ignore[arg-type]
-        offset_difference_seconds=result["offset_difference_seconds"],  # type: ignore[arg-type]
-        explanation=result["explanation"],  # type: ignore[arg-type]
+        from_timezone=result.from_timezone,
+        from_datetime=result.from_datetime.isoformat(),
+        from_utc_offset_seconds=result.from_utc_offset_seconds,
+        to_timezone=result.to_timezone,
+        to_datetime=result.to_datetime.isoformat(),
+        to_utc_offset_seconds=result.to_utc_offset_seconds,
+        offset_difference_seconds=result.offset_difference_seconds,
+        explanation=result.explanation,
     )
 
 
@@ -321,10 +321,10 @@ async def list_timezones(
 
     timezones = [
         TimezoneInfo(
-            id=tz["id"],  # type: ignore[arg-type]
-            country_code=tz["country_code"],
-            comment=tz["comment"],
-            example_city=tz["example_city"],
+            id=tz.id,
+            country_code=tz.country_code,
+            comment=tz.comment,
+            example_city=tz.example_city,
         )
         for tz in timezones_data
     ]
@@ -369,10 +369,10 @@ async def get_timezone_info(
 
     transitions = [
         TimezoneTransition(
-            from_datetime=t["from_datetime"],  # type: ignore[arg-type]
-            utc_offset_seconds=t["utc_offset_seconds"],  # type: ignore[arg-type]
-            is_dst=t["is_dst"],  # type: ignore[arg-type]
-            abbreviation=t["abbreviation"],  # type: ignore[arg-type]
+            from_datetime=t.from_datetime.isoformat(),
+            utc_offset_seconds=t.utc_offset_seconds,
+            is_dst=t.is_dst,
+            abbreviation=t.abbreviation,
         )
         for t in transitions_data
     ]
@@ -381,9 +381,9 @@ async def get_timezone_info(
         timezone=timezone,
         country_code=None,  # Would need full zone1970.tab parsing
         comment=None,
-        current_offset_seconds=current_info["utc_offset_seconds"],  # type: ignore[arg-type]
-        current_is_dst=current_info["is_dst"],  # type: ignore[arg-type]
-        current_abbreviation=current_info["abbreviation"],  # type: ignore[arg-type]
+        current_offset_seconds=current_info.utc_offset_seconds,
+        current_is_dst=current_info.is_dst,
+        current_abbreviation=current_info.abbreviation,
         transitions=transitions,
         tzdata_version=get_tzdata_version(),
     )

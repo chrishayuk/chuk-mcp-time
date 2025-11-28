@@ -26,14 +26,10 @@ def test_get_timezone_info_at_datetime() -> None:
     dt = datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC)
     info = get_timezone_info_at_datetime("America/New_York", dt)
 
-    assert "utc_offset_seconds" in info
-    assert "is_dst" in info
-    assert "abbreviation" in info
-
     # EST is UTC-5, so -18000 seconds
-    assert info["utc_offset_seconds"] == -18000
-    assert info["is_dst"] is False
-    assert info["abbreviation"] == "EST"
+    assert info.utc_offset_seconds == -18000
+    assert info.is_dst is False
+    assert info.abbreviation == "EST"
 
 
 def test_get_timezone_info_at_datetime_dst() -> None:
@@ -43,9 +39,9 @@ def test_get_timezone_info_at_datetime_dst() -> None:
     info = get_timezone_info_at_datetime("America/New_York", dt)
 
     # EDT is UTC-4, so -14400 seconds
-    assert info["utc_offset_seconds"] == -14400
-    assert info["is_dst"] is True
-    assert info["abbreviation"] == "EDT"
+    assert info.utc_offset_seconds == -14400
+    assert info.is_dst is True
+    assert info.abbreviation == "EDT"
 
 
 def test_get_timezone_info_utc() -> None:
@@ -53,9 +49,9 @@ def test_get_timezone_info_utc() -> None:
     dt = datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC)
     info = get_timezone_info_at_datetime("UTC", dt)
 
-    assert info["utc_offset_seconds"] == 0
-    assert info["is_dst"] is False
-    assert info["abbreviation"] == "UTC"
+    assert info.utc_offset_seconds == 0
+    assert info.is_dst is False
+    assert info.abbreviation == "UTC"
 
 
 def test_find_timezone_transitions() -> None:
@@ -71,10 +67,10 @@ def test_find_timezone_transitions() -> None:
 
     # Check structure of transitions
     for t in transitions:
-        assert "from_datetime" in t
-        assert "utc_offset_seconds" in t
-        assert "is_dst" in t
-        assert "abbreviation" in t
+        assert isinstance(t.from_datetime, datetime)
+        assert isinstance(t.utc_offset_seconds, int)
+        assert isinstance(t.is_dst, bool)
+        assert isinstance(t.abbreviation, str)
 
 
 def test_find_timezone_transitions_no_dst() -> None:
@@ -98,10 +94,10 @@ def test_list_all_timezones() -> None:
 
     # Check structure
     for tz in timezones[:5]:  # Just check first 5
-        assert "id" in tz
-        assert "country_code" in tz or tz["country_code"] is None
-        assert "comment" in tz or tz["comment"] is None
-        assert "example_city" in tz or tz["example_city"] is None
+        assert isinstance(tz.id, str)
+        assert tz.country_code is None or isinstance(tz.country_code, str)
+        assert tz.comment is None or isinstance(tz.comment, str)
+        assert tz.example_city is None or isinstance(tz.example_city, str)
 
 
 def test_list_all_timezones_search() -> None:
@@ -110,7 +106,7 @@ def test_list_all_timezones_search() -> None:
 
     # Should find America/New_York
     assert len(timezones) >= 1
-    assert any(tz["id"] == "America/New_York" for tz in timezones)
+    assert any(tz.id == "America/New_York" for tz in timezones)
 
 
 def test_list_all_timezones_search_case_insensitive() -> None:
@@ -135,23 +131,19 @@ def test_convert_datetime_between_timezones() -> None:
         "2025-06-15T14:00:00", "America/New_York", "Europe/London"
     )
 
-    assert result["from_timezone"] == "America/New_York"
-    assert result["to_timezone"] == "Europe/London"
-    assert "from_datetime" in result
-    assert "to_datetime" in result
-    assert "from_utc_offset_seconds" in result
-    assert "to_utc_offset_seconds" in result
-    assert "offset_difference_seconds" in result
-    assert "explanation" in result
+    assert result.from_timezone == "America/New_York"
+    assert result.to_timezone == "Europe/London"
+    assert isinstance(result.from_datetime, datetime)
+    assert isinstance(result.to_datetime, datetime)
 
     # Check offset values are reasonable
     # NYC in June is EDT (UTC-4), London in June is BST (UTC+1)
-    assert result["from_utc_offset_seconds"] == -14400  # -4 hours
-    assert result["to_utc_offset_seconds"] == 3600  # +1 hour
-    assert result["offset_difference_seconds"] == 18000  # 5 hour difference
+    assert result.from_utc_offset_seconds == -14400  # -4 hours
+    assert result.to_utc_offset_seconds == 3600  # +1 hour
+    assert result.offset_difference_seconds == 18000  # 5 hour difference
 
     # Explanation should be present and meaningful
-    assert "ahead" in result["explanation"] or "behind" in result["explanation"]
+    assert "ahead" in result.explanation or "behind" in result.explanation
 
 
 def test_convert_datetime_winter() -> None:
@@ -161,9 +153,9 @@ def test_convert_datetime_winter() -> None:
     )
 
     # NYC in January is EST (UTC-5), London in January is GMT (UTC+0)
-    assert result["from_utc_offset_seconds"] == -18000  # -5 hours
-    assert result["to_utc_offset_seconds"] == 0  # UTC+0
-    assert result["offset_difference_seconds"] == 18000  # 5 hour difference
+    assert result.from_utc_offset_seconds == -18000  # -5 hours
+    assert result.to_utc_offset_seconds == 0  # UTC+0
+    assert result.offset_difference_seconds == 18000  # 5 hour difference
 
 
 def test_convert_datetime_same_timezone() -> None:
@@ -172,17 +164,17 @@ def test_convert_datetime_same_timezone() -> None:
         "2025-06-15T14:00:00", "America/New_York", "America/New_York"
     )
 
-    assert result["from_utc_offset_seconds"] == result["to_utc_offset_seconds"]
-    assert result["offset_difference_seconds"] == 0
-    assert "same UTC offset" in result["explanation"]
+    assert result.from_utc_offset_seconds == result.to_utc_offset_seconds
+    assert result.offset_difference_seconds == 0
+    assert "same UTC offset" in result.explanation
 
 
 def test_convert_datetime_to_utc() -> None:
     """Test converting to UTC."""
     result = convert_datetime_between_timezones("2025-06-15T14:00:00", "America/New_York", "UTC")
 
-    assert result["to_utc_offset_seconds"] == 0
-    assert result["from_utc_offset_seconds"] == -14400  # EDT
+    assert result.to_utc_offset_seconds == 0
+    assert result.from_utc_offset_seconds == -14400  # EDT
 
 
 def test_convert_datetime_across_date_line() -> None:
@@ -192,9 +184,9 @@ def test_convert_datetime_across_date_line() -> None:
     )
 
     # LA to Tokyo crosses date line, should result in next day in Tokyo
-    from_dt = result["from_datetime"]
-    to_dt = result["to_datetime"]
+    from_dt_str = result.from_datetime.isoformat()
+    to_dt_str = result.to_datetime.isoformat()
 
     # Parse the dates to verify day change
-    assert "2025-06-15" in from_dt
-    assert "2025-06-16" in to_dt  # Should be next day in Tokyo
+    assert "2025-06-15" in from_dt_str
+    assert "2025-06-16" in to_dt_str  # Should be next day in Tokyo
