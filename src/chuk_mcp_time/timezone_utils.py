@@ -72,7 +72,7 @@ def find_timezone_transitions(
     """
     transitions = []
 
-    # Sample monthly to detect transitions
+    # Sample daily to detect transition windows
     current = start_dt
     prev_info = None
 
@@ -84,10 +84,14 @@ def find_timezone_transitions(
             info["utc_offset_seconds"] != prev_info["utc_offset_seconds"]
             or info["is_dst"] != prev_info["is_dst"]
         ):
-            # Transition detected, add it
+            # Transition detected between prev_time and current
+            # Use binary search to find exact transition time (within 1 minute)
+            prev_time = current - timedelta(days=1)
+            transition_time = _find_exact_transition(tz_name, prev_time, current, prev_info, info)
+
             transitions.append(
                 {
-                    "from_datetime": current.isoformat(),
+                    "from_datetime": transition_time.isoformat(),
                     "utc_offset_seconds": info["utc_offset_seconds"],
                     "is_dst": info["is_dst"],
                     "abbreviation": info["abbreviation"],
@@ -95,9 +99,46 @@ def find_timezone_transitions(
             )
 
         prev_info = info
-        current += timedelta(days=30)  # Sample monthly
+        current += timedelta(days=1)  # Sample daily
 
     return transitions
+
+
+def _find_exact_transition(
+    tz_name: str,
+    start: datetime,
+    end: datetime,
+    prev_info: dict[str, str | int | bool],
+    new_info: dict[str, str | int | bool],
+) -> datetime:
+    """Binary search to find exact transition time within a window.
+
+    Args:
+        tz_name: IANA timezone identifier
+        start: Start of window (before transition)
+        end: End of window (after transition)
+        prev_info: Timezone info before transition
+        new_info: Timezone info after transition
+
+    Returns:
+        Datetime of transition (accurate to ~1 minute)
+    """
+    # Binary search with 1-minute precision
+    while (end - start).total_seconds() > 60:
+        mid = start + (end - start) / 2
+        mid_info = get_timezone_info_at_datetime(tz_name, mid)
+
+        if (
+            mid_info["utc_offset_seconds"] == prev_info["utc_offset_seconds"]
+            and mid_info["is_dst"] == prev_info["is_dst"]
+        ):
+            # Still in old state, transition is after mid
+            start = mid
+        else:
+            # In new state, transition is before mid
+            end = mid
+
+    return end
 
 
 def list_all_timezones(
