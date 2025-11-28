@@ -1,4 +1,4 @@
-.PHONY: help clean clean-pyc clean-build clean-test clean-all install dev-install test test-cov coverage-report lint format typecheck security check docker-build docker-run version bump-patch bump-minor bump-major publish publish-test publish-manual release
+.PHONY: help clean clean-pyc clean-build clean-test clean-all install dev-install test test-cov coverage-report lint format typecheck security check docker-build docker-run build version bump-patch bump-minor bump-major publish publish-test publish-manual release
 
 # Detect if 'uv' is available for faster operations
 UV := $(shell command -v uv 2> /dev/null)
@@ -32,7 +32,8 @@ help:
 	@echo "  docker-build      Build Docker image"
 	@echo "  docker-run        Run Docker container"
 	@echo ""
-	@echo "Version & Release targets:"
+	@echo "Build & Release targets:"
+	@echo "  build             Build the project (creates dist/ artifacts)"
 	@echo "  version           Display current version"
 	@echo "  bump-patch        Increment patch version (0.0.X)"
 	@echo "  bump-minor        Increment minor version (0.X.0)"
@@ -158,6 +159,16 @@ docker-run:
 	@echo "Running Docker container..."
 	docker run -p 8000:8000 chuk-mcp-time:latest
 
+# Build target
+build: clean-build
+	@echo "Building project..."
+ifdef UV
+	uv build
+else
+	python3 -m build
+endif
+	@echo "Build complete. Distributions are in the 'dist' folder."
+
 # Version & Release targets
 version:
 	@echo "Current version:"
@@ -207,28 +218,94 @@ publish:
 	git push origin "v$$version"; \
 	echo "Tag created and pushed. GitHub Actions will handle the release."
 
-publish-test:
-	@echo "Building package..."
+publish-test: build
+	@echo "Publishing to TestPyPI..."
+	@echo ""
+	@version=$$(grep '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/'); \
+	echo "Version: $$version"; \
+	echo "";
 ifdef UV
-	uv build
+	uv run twine upload --repository testpypi dist/*
 else
-	python -m build
+	python3 -m twine upload --repository testpypi dist/*
 endif
-	@echo "Uploading to TestPyPI..."
-	twine upload --repository testpypi dist/*
+	@version=$$(grep '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/'); \
+	echo ""; \
+	echo "✓ Uploaded to TestPyPI!"; \
+	echo ""; \
+	echo "Install with:"; \
+	echo "  pip install --index-url https://test.pypi.org/simple/ chuk-mcp-time==$$version"
 
-publish-manual:
-	@echo "Building package..."
-ifdef UV
-	uv build
-else
-	python -m build
-endif
-	@echo "Uploading to PyPI..."
-	@if [ -z "$$PYPI_TOKEN" ]; then \
-		echo "Error: PYPI_TOKEN environment variable not set"; \
+publish-manual: build
+	@echo "Manual PyPI Publishing"
+	@echo "======================"
+	@echo ""
+	@version=$$(grep '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/'); \
+	tag="v$$version"; \
+	echo "Version: $$version"; \
+	echo "Tag: $$tag"; \
+	echo ""; \
+	\
+	echo "Pre-flight checks:"; \
+	echo "=================="; \
+	\
+	if git diff --quiet && git diff --cached --quiet; then \
+		echo "✓ Working directory is clean"; \
+	else \
+		echo "✗ Working directory has uncommitted changes"; \
+		echo ""; \
+		git status --short; \
+		echo ""; \
+		echo "Please commit or stash your changes before publishing."; \
 		exit 1; \
-	fi
-	twine upload --username __token__ --password $$PYPI_TOKEN dist/*
+	fi; \
+	\
+	if git tag -l | grep -q "^$$tag$$"; then \
+		echo "✓ Tag $$tag exists"; \
+	else \
+		echo "⚠ Tag $$tag does not exist yet"; \
+		echo ""; \
+		read -p "Create tag now? (y/N) " -n 1 -r; \
+		echo ""; \
+		if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+			git tag -a "$$tag" -m "Release $$tag"; \
+			echo "✓ Tag created locally"; \
+		else \
+			echo "Continuing without creating tag..."; \
+		fi; \
+	fi; \
+	\
+	echo ""; \
+	echo "This will upload version $$version to PyPI"; \
+	echo ""; \
+	read -p "Continue? (y/N) " -n 1 -r; \
+	echo ""; \
+	if [[ ! $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "Aborted."; \
+		exit 1; \
+	fi; \
+	\
+	echo ""; \
+	echo "Uploading to PyPI..."; \
+	if [ -n "$$PYPI_TOKEN" ]; then \
+		if command -v uv >/dev/null 2>&1; then \
+			uv run twine upload --username __token__ --password "$$PYPI_TOKEN" dist/*; \
+		else \
+			python3 -m twine upload --username __token__ --password "$$PYPI_TOKEN" dist/*; \
+		fi; \
+	else \
+		if command -v uv >/dev/null 2>&1; then \
+			uv run twine upload dist/*; \
+		else \
+			python3 -m twine upload dist/*; \
+		fi; \
+	fi; \
+	echo ""; \
+	echo "✓ Published to PyPI!"; \
+	echo ""; \
+	if git tag -l | grep -q "^$$tag$$"; then \
+		echo "Push tag with: git push origin $$tag"; \
+	fi; \
+	echo "Install with: pip install chuk-mcp-time==$$version"
 
 release: publish
