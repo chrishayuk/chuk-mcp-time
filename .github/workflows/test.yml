@@ -54,4 +54,4 @@ jobs:
       - name: Check coverage threshold
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: |
-          coverage report --fail-under=70
+          uv run coverage report --fail-under=70
