@@ -28,21 +28,40 @@ A Model Context Protocol (MCP) server that provides extremely accurate time info
 
 🚀 **Production-Ready**: Docker support, GitHub Actions CI/CD, Fly.io deployment
 
-## Installation
+🌐 **Public Endpoint**: Try instantly at `https://time.chukai.io/mcp` - no installation needed!
 
-### Using uvx (recommended)
+## Quick Start
+
+### 🌐 Use the Public HTTP Endpoint (No Installation)
+
+Try it instantly with our hosted MCP server:
+
+**Endpoint:** `https://time.chukai.io/mcp`
+
+Configure in Claude Desktop or any MCP client to connect to the HTTP streamable endpoint. No installation required!
+
+### 📦 Installation Options
+
+#### Using uvx (recommended for local use)
 
 ```bash
+# Run directly with uvx (auto-installs and runs)
 uvx chuk-mcp-time
+
+# For STDIO mode (Claude Desktop, mcp-cli)
+uvx chuk-mcp-time
+
+# For HTTP mode
+uvx chuk-mcp-time http
 ```
 
-### Using pip
+#### Using pip
 
 ```bash
 pip install chuk-mcp-time
 ```
 
-### From source
+#### From source
 
 ```bash
 git clone https://github.com/chuk-ai/chuk-mcp-time.git
@@ -83,29 +102,13 @@ Status.................................. ✅ OK - System clock is accurate
 
 See [examples/README.md](examples/README.md) for detailed demo documentation.
 
-## Quick Start
+## Usage with MCP Clients
 
-### As MCP Server (STDIO)
+### Option 1: Public HTTP Endpoint (Easiest)
 
-```bash
-# Run with default settings (STDIO transport for Claude Desktop, mcp-cli, etc.)
-chuk-mcp-time
+Connect to our hosted server at `https://time.chukai.io/mcp`
 
-# Or using Python module
-python -m chuk_mcp_time.server
-```
-
-### As HTTP Server
-
-```bash
-# Run in HTTP mode for testing/development
-chuk-mcp-time http
-
-# Or
-python -m chuk_mcp_time.server http
-```
-
-### With Claude Desktop
+**Claude Desktop Configuration:**
 
 Add to your `claude_desktop_config.json`:
 
@@ -113,8 +116,64 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "time": {
+      "url": "https://time.chukai.io/mcp"
+    }
+  }
+}
+```
+
+✅ No installation required
+✅ Always up to date
+✅ High availability
+
+### Option 2: Local STDIO (Most Common)
+
+Run locally using uvx for STDIO transport (works with Claude Desktop, mcp-cli, etc.):
+
+**Claude Desktop Configuration:**
+
+```json
+{
+  "mcpServers": {
+    "time": {
       "command": "uvx",
       "args": ["chuk-mcp-time"]
+    }
+  }
+}
+```
+
+**Or run manually:**
+
+```bash
+# Run with uvx
+uvx chuk-mcp-time
+
+# Or with Python
+python -m chuk_mcp_time.server
+```
+
+### Option 3: Local HTTP Server
+
+Run your own HTTP server for testing/development:
+
+```bash
+# Start HTTP server
+uvx chuk-mcp-time http
+
+# Or with Python
+python -m chuk_mcp_time.server http
+
+# Server runs on http://localhost:8000
+```
+
+**Claude Desktop Configuration:**
+
+```json
+{
+  "mcpServers": {
+    "time": {
+      "url": "http://localhost:8000/mcp"
     }
   }
 }
