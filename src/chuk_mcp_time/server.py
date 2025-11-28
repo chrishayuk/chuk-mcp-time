@@ -13,10 +13,23 @@ from chuk_mcp_time.models import (
     AccuracyMode,
     ClockComparisonResponse,
     ClockStatus,
+    ListTimezonesResponse,
+    LocalTimeResponse,
     TimeResponse,
+    TimezoneConversionResponse,
+    TimezoneDetailResponse,
+    TimezoneInfo,
     TimezoneResponse,
+    TimezoneTransition,
 )
 from chuk_mcp_time.ntp_client import NTPClient
+from chuk_mcp_time.timezone_utils import (
+    convert_datetime_between_timezones,
+    find_timezone_transitions,
+    get_timezone_info_at_datetime,
+    get_tzdata_version,
+    list_all_timezones,
+)
 
 # Initialize components
 _config = get_config()
@@ -204,6 +217,175 @@ async def compare_system_clock(
         delta_ms=time_response.system_delta_ms,
         estimated_error_ms=time_response.estimated_error_ms,
         status=status,
+    )
+
+
+@tool  # type: ignore[arg-type]
+async def get_local_time(
+    timezone: str,
+    mode: AccuracyMode = AccuracyMode.FAST,
+    compensate_latency: bool = True,
+) -> LocalTimeResponse:
+    """Get current time for a specific IANA timezone with high accuracy.
+
+    Uses NTP consensus for accurate UTC time, then converts to the requested
+    timezone using IANA tzdata. This provides authoritative local time independent
+    of system clock accuracy.
+
+    Args:
+        timezone: IANA timezone identifier (e.g., "America/New_York", "Europe/London")
+        mode: Accuracy mode - "fast" or "accurate"
+        compensate_latency: If True, add query duration to timestamp (default: True)
+
+    Returns:
+        LocalTimeResponse with local time and timezone metadata
+    """
+    # Get accurate UTC time
+    time_response = await get_time_utc(mode=mode, compensate_latency=compensate_latency)  # type: ignore[misc]
+
+    # Convert to local timezone
+    utc_timestamp = time_response.epoch_ms / 1000.0
+    utc_dt = datetime.fromtimestamp(utc_timestamp, tz=UTC)
+
+    # Get timezone info
+    tz_info = get_timezone_info_at_datetime(timezone, utc_dt)
+
+    # Apply timezone
+    from zoneinfo import ZoneInfo
+
+    local_dt = utc_dt.astimezone(ZoneInfo(timezone))
+
+    return LocalTimeResponse(
+        local_datetime=local_dt.isoformat(),
+        timezone=timezone,
+        utc_offset_seconds=tz_info["utc_offset_seconds"],  # type: ignore[arg-type]
+        is_dst=tz_info["is_dst"],  # type: ignore[arg-type]
+        abbreviation=tz_info["abbreviation"],  # type: ignore[arg-type]
+        source_utc=time_response.iso8601_time,
+        tzdata_version=get_tzdata_version(),
+        estimated_error_ms=time_response.estimated_error_ms,
+    )
+
+
+@tool  # type: ignore[arg-type]
+async def convert_time(
+    datetime_str: str,
+    from_timezone: str,
+    to_timezone: str,
+) -> TimezoneConversionResponse:
+    """Convert a datetime from one timezone to another using IANA rules.
+
+    Performs timezone conversion independent of system clock. Uses IANA tzdata
+    to handle all DST transitions, historical changes, and political boundaries.
+
+    Args:
+        datetime_str: ISO 8601 datetime string (naive, will be interpreted in from_timezone)
+        from_timezone: Source IANA timezone identifier
+        to_timezone: Target IANA timezone identifier
+
+    Returns:
+        TimezoneConversionResponse with conversion details and explanation
+    """
+    result = convert_datetime_between_timezones(datetime_str, from_timezone, to_timezone)
+
+    return TimezoneConversionResponse(
+        from_timezone=result["from_timezone"],  # type: ignore[arg-type]
+        from_datetime=result["from_datetime"],  # type: ignore[arg-type]
+        from_utc_offset_seconds=result["from_utc_offset_seconds"],  # type: ignore[arg-type]
+        to_timezone=result["to_timezone"],  # type: ignore[arg-type]
+        to_datetime=result["to_datetime"],  # type: ignore[arg-type]
+        to_utc_offset_seconds=result["to_utc_offset_seconds"],  # type: ignore[arg-type]
+        offset_difference_seconds=result["offset_difference_seconds"],  # type: ignore[arg-type]
+        explanation=result["explanation"],  # type: ignore[arg-type]
+    )
+
+
+@tool  # type: ignore[arg-type]
+async def list_timezones(
+    country_code: str | None = None,
+    search: str | None = None,
+) -> ListTimezonesResponse:
+    """List available IANA timezones with optional filtering.
+
+    Returns all valid IANA timezone identifiers. Helps discover correct timezone
+    names and prevents hallucination of invalid timezones.
+
+    Args:
+        country_code: Optional ISO 3166 country code filter (e.g., "US", "GB", "FR")
+        search: Optional substring search filter (case-insensitive)
+
+    Returns:
+        ListTimezonesResponse with list of timezones and metadata
+    """
+    timezones_data = list_all_timezones(country_code=country_code, search=search)
+
+    timezones = [
+        TimezoneInfo(
+            id=tz["id"],  # type: ignore[arg-type]
+            country_code=tz["country_code"],
+            comment=tz["comment"],
+            example_city=tz["example_city"],
+        )
+        for tz in timezones_data
+    ]
+
+    return ListTimezonesResponse(
+        timezones=timezones,
+        total_count=len(timezones),
+        tzdata_version=get_tzdata_version(),
+    )
+
+
+@tool  # type: ignore[arg-type]
+async def get_timezone_info(
+    timezone: str,
+    mode: AccuracyMode = AccuracyMode.FAST,
+) -> TimezoneDetailResponse:
+    """Get detailed information about a timezone including upcoming transitions.
+
+    Provides comprehensive timezone metadata including current offset, DST status,
+    and upcoming transitions (e.g., DST changes). Useful for planning and
+    understanding timezone behavior.
+
+    Args:
+        timezone: IANA timezone identifier
+        mode: Accuracy mode for getting current time - "fast" or "accurate"
+
+    Returns:
+        TimezoneDetailResponse with current info and transition schedule
+    """
+    # Get accurate current time
+    time_response = await get_time_utc(mode=mode)  # type: ignore[misc]
+    utc_now = datetime.fromtimestamp(time_response.epoch_ms / 1000.0, tz=UTC)
+
+    # Get current timezone info
+    current_info = get_timezone_info_at_datetime(timezone, utc_now)
+
+    # Find transitions in next 2 years
+    end_time = datetime.fromtimestamp(
+        (time_response.epoch_ms / 1000.0) + (365 * 2 * 24 * 3600), tz=UTC
+    )
+    transitions_data = find_timezone_transitions(timezone, utc_now, end_time)
+
+    transitions = [
+        TimezoneTransition(
+            from_datetime=t["from_datetime"],  # type: ignore[arg-type]
+            utc_offset_seconds=t["utc_offset_seconds"],  # type: ignore[arg-type]
+            is_dst=t["is_dst"],  # type: ignore[arg-type]
+            abbreviation=t["abbreviation"],  # type: ignore[arg-type]
+        )
+        for t in transitions_data
+    ]
+
+    return TimezoneDetailResponse(
+        timezone=timezone,
+        country_code=None,  # Would need full zone1970.tab parsing
+        comment=None,
+        current_offset_seconds=current_info["utc_offset_seconds"],  # type: ignore[arg-type]
+        current_is_dst=current_info["is_dst"],  # type: ignore[arg-type]
+        current_abbreviation=current_info["abbreviation"],  # type: ignore[arg-type]
+        transitions=transitions,
+        tzdata_version=get_tzdata_version(),
     )
 
 

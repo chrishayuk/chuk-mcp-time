@@ -1,8 +1,8 @@
 # chuk-mcp-time
 
-**High-accuracy time oracle MCP server using NTP consensus**
+**High-accuracy time + timezone MCP server using NTP consensus & IANA tzdata**
 
-A Model Context Protocol (MCP) server that provides extremely accurate time information by querying multiple NTP servers, removing outliers, and computing a consensus time independent of the system clock. Perfect for applications requiring trusted time sources, detecting clock drift, or working in environments where system clocks may be unreliable.
+A Model Context Protocol (MCP) server that provides extremely accurate time information by querying multiple NTP servers, removing outliers, and computing a consensus time independent of the system clock. Now includes comprehensive timezone support using IANA tzdata for accurate timezone conversions, DST handling, and timezone discovery. Perfect for applications requiring trusted time sources, timezone conversions, detecting clock drift, or working in distributed systems.
 
 [![Test](https://github.com/chuk-ai/chuk-mcp-time/workflows/Test/badge.svg)](https://github.com/chuk-ai/chuk-mcp-time/actions)
 [![PyPI version](https://badge.fury.io/py/chuk-mcp-time.svg)](https://badge.fury.io/py/chuk-mcp-time)
@@ -18,9 +18,13 @@ A Model Context Protocol (MCP) server that provides extremely accurate time info
 
 🔒 **Type-Safe**: 100% Pydantic models with full type hints and validation using enums
 
-🌍 **Timezone Support**: Convert consensus time to any IANA timezone
+🌍 **IANA Timezone Support**: Complete timezone handling with DST, conversions, and discovery
 
 🔍 **Clock Drift Detection**: Compare system clock against trusted NTP sources
+
+⏰ **Timezone Conversions**: Convert between any IANA timezones with accurate DST handling
+
+🗺️ **Timezone Discovery**: List and search 600+ IANA timezones to prevent hallucination
 
 📊 **Transparent**: Returns all source data, consensus method, error estimates, and query duration
 
@@ -228,7 +232,131 @@ Same as `get_time_utc` plus:
 }
 ```
 
-### 3. `compare_system_clock`
+### 3. `get_local_time`
+
+Get current time for a specific IANA timezone with high accuracy.
+
+Uses NTP consensus for accurate UTC time, then converts to the requested timezone using IANA tzdata. Provides authoritative local time independent of system clock.
+
+**Parameters:**
+- `timezone`: IANA timezone identifier (e.g., `"America/New_York"`, `"Europe/London"`, `"Asia/Tokyo"`)
+- `mode` (optional): `"fast"` or `"accurate"`
+- `compensate_latency` (optional): `true` (default) to adjust timestamp for query duration
+
+**Returns:**
+```json
+{
+  "local_datetime": "2025-11-27T20:23:45.123456-05:00",
+  "timezone": "America/New_York",
+  "utc_offset_seconds": -18000,
+  "is_dst": false,
+  "abbreviation": "EST",
+  "source_utc": "2025-11-28T01:23:45.123456+00:00",
+  "tzdata_version": "2024b",
+  "estimated_error_ms": 12.5
+}
+```
+
+### 4. `convert_time`
+
+Convert a datetime from one timezone to another using IANA rules.
+
+Performs timezone conversion independent of system clock. Uses IANA tzdata to handle all DST transitions, historical changes, and political boundaries.
+
+**Parameters:**
+- `datetime_str`: ISO 8601 datetime string (naive, will be interpreted in from_timezone)
+- `from_timezone`: Source IANA timezone identifier
+- `to_timezone`: Target IANA timezone identifier
+
+**Returns:**
+```json
+{
+  "from_timezone": "America/New_York",
+  "from_datetime": "2025-06-15T14:30:00-04:00",
+  "from_utc_offset_seconds": -14400,
+  "to_timezone": "Europe/London",
+  "to_datetime": "2025-06-15T19:30:00+01:00",
+  "to_utc_offset_seconds": 3600,
+  "offset_difference_seconds": 18000,
+  "explanation": "Europe/London is 5.0 hours ahead of America/New_York (UTC-4.0 → UTC+1.0)"
+}
+```
+
+### 5. `list_timezones`
+
+List available IANA timezones with optional filtering.
+
+Returns all valid IANA timezone identifiers. Helps discover correct timezone names and prevents hallucination of invalid timezones.
+
+**Parameters:**
+- `country_code` (optional): ISO 3166 country code filter (e.g., `"US"`, `"GB"`, `"FR"`)
+- `search` (optional): Substring search filter (case-insensitive)
+
+**Returns:**
+```json
+{
+  "timezones": [
+    {
+      "id": "America/New_York",
+      "country_code": "US",
+      "comment": null,
+      "example_city": "New York"
+    },
+    {
+      "id": "Europe/London",
+      "country_code": "GB",
+      "comment": null,
+      "example_city": "London"
+    }
+  ],
+  "total_count": 2,
+  "tzdata_version": "2024b"
+}
+```
+
+**Example searches:**
+- `search: "New"` → Returns all timezones with "New" in the name
+- `search: "Tokyo"` → Returns Asia/Tokyo
+- No filters → Returns all 600+ IANA timezones
+
+### 6. `get_timezone_info`
+
+Get detailed information about a timezone including upcoming transitions.
+
+Provides comprehensive timezone metadata including current offset, DST status, and upcoming transitions (e.g., DST changes). Useful for planning and understanding timezone behavior.
+
+**Parameters:**
+- `timezone`: IANA timezone identifier
+- `mode` (optional): `"fast"` or `"accurate"` (affects accuracy of current time)
+
+**Returns:**
+```json
+{
+  "timezone": "America/New_York",
+  "country_code": null,
+  "comment": null,
+  "current_offset_seconds": -18000,
+  "current_is_dst": false,
+  "current_abbreviation": "EST",
+  "transitions": [
+    {
+      "from_datetime": "2026-03-08T07:00:00+00:00",
+      "utc_offset_seconds": -14400,
+      "is_dst": true,
+      "abbreviation": "EDT"
+    },
+    {
+      "from_datetime": "2026-11-01T06:00:00+00:00",
+      "utc_offset_seconds": -18000,
+      "is_dst": false,
+      "abbreviation": "EST"
+    }
+  ],
+  "tzdata_version": "2024b"
+}
+```
+
+### 7. `compare_system_clock`
 
 Compare system clock against trusted NTP sources to detect drift.
 
@@ -300,6 +428,22 @@ The server tracks how long it takes to query NTP servers and compute consensus (
 - Response sent at T+150ms with timestamp 12:00:00.150
 
 This ensures the timestamp is as accurate as possible when received by the caller. You can disable this with `compensate_latency=false` if you prefer the raw consensus timestamp.
+
+### Timezone Support
+
+The server uses Python's `zoneinfo` module with IANA tzdata for authoritative timezone information:
+
+1. **IANA tzdata Source**: Uses official IANA Time Zone Database (maintained by IANA, curated by global experts)
+2. **DST Handling**: Automatic daylight saving time transitions using historical and future rules
+3. **Political Boundaries**: Handles all timezone changes, country boundaries, and historical adjustments
+4. **Transition Detection**: Identifies upcoming DST changes and offset modifications
+5. **No System Clock Dependency**: All timezone conversions use NTP consensus time, not system clock
+
+**Timezone Data Hierarchy:**
+- UTC Authority: NTP consensus (time.google.com, time.cloudflare.com, etc.)
+- Political Time: IANA tzdata (official timezone database)
+- Local Conversion: Python's `zoneinfo` module
+- Result: Accurate local time independent of system clock
 
 ### Default NTP Servers
 
@@ -409,11 +553,13 @@ chuk-mcp-time/
 │   ├── models.py          # Pydantic models (enums, responses)
 │   ├── ntp_client.py      # Async NTP client
 │   ├── consensus.py       # Consensus algorithm engine
-│   └── server.py          # MCP server with tools
+│   ├── timezone_utils.py  # IANA timezone utilities
+│   └── server.py          # MCP server with 7 tools
 ├── tests/
 │   ├── test_config.py
 │   ├── test_consensus.py
-│   └── test_ntp_client.py
+│   ├── test_ntp_client.py
+│   └── test_server_tools.py
 ├── pyproject.toml
 ├── Makefile
 ├── Dockerfile
@@ -448,18 +594,63 @@ log_entry = {
 }
 ```
 
-### 3. Multi-Region Time Coordination
+### 3. Timezone Conversions for Scheduling
 
 ```python
-# Get time for different regions
-ny_time = await get_time_for_timezone("America/New_York")
-london_time = await get_time_for_timezone("Europe/London")
-tokyo_time = await get_time_for_timezone("Asia/Tokyo")
+# Convert meeting time between timezones
+result = await convert_time(
+    datetime_str="2025-12-15T14:00:00",
+    from_timezone="America/New_York",
+    to_timezone="Asia/Tokyo"
+)
 
-# All from the same NTP consensus - guaranteed consistency
+print(result.explanation)
+# "Asia/Tokyo is 14.0 hours ahead of America/New_York (UTC-5.0 → UTC+9.0)"
+print(f"Meeting time in Tokyo: {result.to_datetime}")
+# "2025-12-16T04:00:00+09:00"
 ```
 
-### 4. Financial/Trading Applications
+### 4. Multi-Region Time Coordination
+
+```python
+# Get accurate local time for different regions
+ny_time = await get_local_time("America/New_York")
+london_time = await get_local_time("Europe/London")
+tokyo_time = await get_local_time("Asia/Tokyo")
+
+# All from the same NTP consensus - guaranteed consistency
+# Each includes DST status, offset, and abbreviation
+print(f"NY: {ny_time.local_datetime} ({ny_time.abbreviation})")
+print(f"London: {london_time.local_datetime} ({london_time.abbreviation})")
+print(f"Tokyo: {tokyo_time.local_datetime} ({tokyo_time.abbreviation})")
+```
+
+### 5. Discovering Valid Timezones
+
+```python
+# Search for timezones to avoid hallucination
+timezones = await list_timezones(search="New")
+
+for tz in timezones.timezones:
+    print(f"{tz.id} - {tz.example_city}")
+# America/New_York - New York
+# America/North_Dakota/New_Salem - New Salem
+# ...
+```
+
+### 6. Planning Around DST Transitions
+
+```python
+# Get upcoming DST transitions
+info = await get_timezone_info("America/New_York")
+
+print(f"Current: {info.current_abbreviation} (DST: {info.current_is_dst})")
+print(f"Upcoming transitions:")
+for transition in info.transitions:
+    print(f"  {transition.from_datetime}: {transition.abbreviation} (DST: {transition.is_dst})")
+```
+
+### 7. Financial/Trading Applications
 
 ```python
 # High-accuracy mode for financial operations

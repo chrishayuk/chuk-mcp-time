@@ -366,3 +366,195 @@ async def test_get_time_utc_latency_compensation_warnings() -> None:
 
                 # Should have added latency compensation warning
                 assert any("latency compensation" in w.lower() for w in response.warnings)
+
+
+@pytest.mark.asyncio
+@pytest.mark.network
+async def test_get_local_time() -> None:
+    """Test get_local_time tool function."""
+    from chuk_mcp_time.server import get_local_time
+
+    response = await get_local_time(
+        timezone="America/New_York",
+        mode=AccuracyMode.FAST,
+        compensate_latency=True,
+    )
+
+    assert response.local_datetime
+    assert response.timezone == "America/New_York"
+    assert isinstance(response.utc_offset_seconds, int)
+    assert isinstance(response.is_dst, bool)
+    assert response.abbreviation in ["EST", "EDT"]
+    assert response.source_utc
+    assert response.tzdata_version
+    assert response.estimated_error_ms > 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.network
+async def test_get_local_time_utc() -> None:
+    """Test get_local_time with UTC timezone."""
+    from chuk_mcp_time.server import get_local_time
+
+    response = await get_local_time(timezone="UTC", mode=AccuracyMode.FAST)
+
+    assert response.timezone == "UTC"
+    assert response.utc_offset_seconds == 0
+    assert response.is_dst is False
+    assert response.abbreviation == "UTC"
+
+
+@pytest.mark.asyncio
+async def test_convert_time() -> None:
+    """Test convert_time tool function."""
+    from chuk_mcp_time.server import convert_time
+
+    response = await convert_time(
+        datetime_str="2025-06-15T14:00:00",
+        from_timezone="America/New_York",
+        to_timezone="Europe/London",
+    )
+
+    assert response.from_timezone == "America/New_York"
+    assert response.to_timezone == "Europe/London"
+    assert response.from_datetime
+    assert response.to_datetime
+    assert response.from_utc_offset_seconds == -14400  # EDT
+    assert response.to_utc_offset_seconds == 3600  # BST
+    assert response.offset_difference_seconds == 18000  # 5 hours
+    assert "ahead" in response.explanation or "behind" in response.explanation
+
+
+@pytest.mark.asyncio
+async def test_convert_time_winter() -> None:
+    """Test convert_time during winter (standard time)."""
+    from chuk_mcp_time.server import convert_time
+
+    response = await convert_time(
+        datetime_str="2025-01-15T14:00:00",
+        from_timezone="America/New_York",
+        to_timezone="Europe/London",
+    )
+
+    assert response.from_utc_offset_seconds == -18000  # EST
+    assert response.to_utc_offset_seconds == 0  # GMT
+    assert response.offset_difference_seconds == 18000
+
+
+@pytest.mark.asyncio
+async def test_convert_time_same_timezone() -> None:
+    """Test convert_time within same timezone."""
+    from chuk_mcp_time.server import convert_time
+
+    response = await convert_time(
+        datetime_str="2025-06-15T14:00:00",
+        from_timezone="America/New_York",
+        to_timezone="America/New_York",
+    )
+
+    assert response.from_utc_offset_seconds == response.to_utc_offset_seconds
+    assert response.offset_difference_seconds == 0
+    assert "same UTC offset" in response.explanation
+
+
+@pytest.mark.asyncio
+async def test_list_timezones() -> None:
+    """Test list_timezones tool function."""
+    from chuk_mcp_time.server import list_timezones
+
+    response = await list_timezones()
+
+    assert response.total_count > 100
+    assert len(response.timezones) > 100
+    assert response.tzdata_version
+
+    # Check first timezone has expected structure
+    tz = response.timezones[0]
+    assert tz.id
+    assert isinstance(tz.country_code, str) or tz.country_code is None
+    assert isinstance(tz.comment, str) or tz.comment is None
+    assert isinstance(tz.example_city, str) or tz.example_city is None
+
+
+@pytest.mark.asyncio
+async def test_list_timezones_with_search() -> None:
+    """Test list_timezones with search filter."""
+    from chuk_mcp_time.server import list_timezones
+
+    response = await list_timezones(search="New_York")
+
+    assert response.total_count >= 1
+    assert any(tz.id == "America/New_York" for tz in response.timezones)
+
+
+@pytest.mark.asyncio
+async def test_list_timezones_search_case_insensitive() -> None:
+    """Test that list_timezones search is case-insensitive."""
+    from chuk_mcp_time.server import list_timezones
+
+    response_lower = await list_timezones(search="london")
+    response_upper = await list_timezones(search="LONDON")
+
+    assert response_lower.total_count == response_upper.total_count
+    assert response_lower.total_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_list_timezones_no_results() -> None:
+    """Test list_timezones with search that returns no results."""
+    from chuk_mcp_time.server import list_timezones
+
+    response = await list_timezones(search="NonExistentTimezone12345")
+
+    assert response.total_count == 0
+    assert len(response.timezones) == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.network
+async def test_get_timezone_info() -> None:
+    """Test get_timezone_info tool function."""
+    from chuk_mcp_time.server import get_timezone_info
+
+    response = await get_timezone_info(timezone="America/New_York", mode=AccuracyMode.FAST)
+
+    assert response.timezone == "America/New_York"
+    assert isinstance(response.current_offset_seconds, int)
+    assert isinstance(response.current_is_dst, bool)
+    assert response.current_abbreviation in ["EST", "EDT"]
+    assert isinstance(response.transitions, list)
+    assert response.tzdata_version
+
+
+@pytest.mark.asyncio
+@pytest.mark.network
+async def test_get_timezone_info_with_transitions() -> None:
+    """Test that get_timezone_info returns DST transitions."""
+    from chuk_mcp_time.server import get_timezone_info
+
+    response = await get_timezone_info(timezone="America/New_York", mode=AccuracyMode.FAST)
+
+    # New York has DST transitions
+    assert len(response.transitions) >= 2
+
+    # Check transition structure
+    for transition in response.transitions:
+        assert transition.from_datetime
+        assert isinstance(transition.utc_offset_seconds, int)
+        assert isinstance(transition.is_dst, bool)
+        assert transition.abbreviation
+
+
+@pytest.mark.asyncio
+@pytest.mark.network
+async def test_get_timezone_info_no_dst() -> None:
+    """Test get_timezone_info for timezone without DST."""
+    from chuk_mcp_time.server import get_timezone_info
+
+    # Phoenix doesn't observe DST
+    response = await get_timezone_info(timezone="America/Phoenix", mode=AccuracyMode.FAST)
+
+    assert response.timezone == "America/Phoenix"
+    assert response.current_is_dst is False
+    # Should have very few or no transitions
+    assert len(response.transitions) <= 1

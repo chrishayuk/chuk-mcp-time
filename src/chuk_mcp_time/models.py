@@ -124,3 +124,68 @@ class ClockComparisonResponse(BaseModel):
     delta_ms: float = Field(description="Difference in milliseconds (positive = system is ahead)")
     estimated_error_ms: float = Field(description="Estimated error of the consensus time")
     status: ClockStatus = Field(description="Clock status: ok, drift, or error")
+
+
+class LocalTimeResponse(BaseModel):
+    """Response for get_local_time tool."""
+
+    local_datetime: str = Field(description="Local time in ISO 8601 format with timezone")
+    timezone: str = Field(description="IANA timezone identifier")
+    utc_offset_seconds: int = Field(description="UTC offset in seconds")
+    is_dst: bool = Field(description="Whether daylight saving time is active")
+    abbreviation: str = Field(description="Timezone abbreviation (e.g., EST, BST)")
+    source_utc: str = Field(description="Source UTC time from consensus")
+    tzdata_version: str = Field(description="IANA tzdata version")
+    estimated_error_ms: float = Field(description="Estimated error from UTC consensus")
+
+
+class TimezoneConversionResponse(BaseModel):
+    """Response for convert_time tool."""
+
+    from_timezone: str = Field(description="Source IANA timezone")
+    from_datetime: str = Field(description="Source datetime in ISO 8601 format")
+    from_utc_offset_seconds: int = Field(description="Source UTC offset in seconds")
+    to_timezone: str = Field(description="Target IANA timezone")
+    to_datetime: str = Field(description="Target datetime in ISO 8601 format")
+    to_utc_offset_seconds: int = Field(description="Target UTC offset in seconds")
+    offset_difference_seconds: int = Field(description="Difference between offsets")
+    explanation: str = Field(description="Human-readable explanation of the conversion")
+
+
+class TimezoneInfo(BaseModel):
+    """Timezone information entry."""
+
+    id: str = Field(description="IANA timezone identifier")
+    country_code: str | None = Field(description="ISO 3166 country code", default=None)
+    comment: str | None = Field(description="Additional comment or note", default=None)
+    example_city: str | None = Field(description="Example city in this timezone", default=None)
+
+
+class ListTimezonesResponse(BaseModel):
+    """Response for list_timezones tool."""
+
+    timezones: list[TimezoneInfo] = Field(description="List of timezone entries")
+    total_count: int = Field(description="Total number of timezones returned")
+    tzdata_version: str = Field(description="IANA tzdata version")
+
+
+class TimezoneTransition(BaseModel):
+    """Timezone transition information."""
+
+    from_datetime: str = Field(description="Start of this offset period")
+    utc_offset_seconds: int = Field(description="UTC offset during this period")
+    is_dst: bool = Field(description="Whether DST is active during this period")
+    abbreviation: str = Field(description="Timezone abbreviation during this period")
+
+
+class TimezoneDetailResponse(BaseModel):
+    """Response for get_timezone_info tool."""
+
+    timezone: str = Field(description="IANA timezone identifier")
+    country_code: str | None = Field(description="ISO 3166 country code")
+    comment: str | None = Field(description="Additional timezone information")
+    current_offset_seconds: int = Field(description="Current UTC offset in seconds")
+    current_is_dst: bool = Field(description="Whether DST is currently active")
+    current_abbreviation: str = Field(description="Current timezone abbreviation")
+    transitions: list[TimezoneTransition] = Field(description="Upcoming timezone transitions")
+    tzdata_version: str = Field(description="IANA tzdata version")

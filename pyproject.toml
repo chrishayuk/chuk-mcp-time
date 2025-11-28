@@ -1,11 +1,11 @@
 [project]
 name = "chuk-mcp-time"
-version = "1.0.0"
+version = "1.0.1"
 description = "High-accuracy time oracle MCP server using NTP consensus and multiple time sources"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "Christopher Hay", email = "chris@chuk.ai" }
+    { name = "Christopher Hay", email = "chrishayuk@somejunkmailbox.com" }
 ]
 license = { text = "MIT" }
 keywords = ["mcp", "time", "ntp", "oracle", "consensus"]
