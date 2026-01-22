@@ -87,7 +87,7 @@ wheels = [
 
 [[package]]
 name = "chuk-mcp-time"
-version = "1.0.3"
+version = "1.1"
 source = { editable = "." }
 dependencies = [
     { name = "chuk-mcp-server" },
