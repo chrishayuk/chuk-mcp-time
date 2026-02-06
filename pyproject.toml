@@ -1,6 +1,6 @@
 [project]
 name = "chuk-mcp-time"
-version = "1.1"
+version = "1.1.1"
 description = "High-accuracy time oracle MCP server using NTP consensus and multiple time sources"
 readme = "README.md"
 requires-python = ">=3.11"
