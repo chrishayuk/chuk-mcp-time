@@ -1,14 +1,14 @@
 """Timezone utilities using IANA tzdata - Pydantic-native & async-first."""
 
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from zoneinfo import ZoneInfo, available_timezones
 
 from pydantic import BaseModel, Field
 
 
 # Constants
-class TzdataSource(str, Enum):
+class TzdataSource(StrEnum):
     """Source of timezone data."""
 
     SYSTEM = "system"
@@ -16,13 +16,13 @@ class TzdataSource(str, Enum):
     UNKNOWN = "unknown"
 
 
-class DeprecatedTimezonePrefix(str, Enum):
+class DeprecatedTimezonePrefix(StrEnum):
     """Prefixes for deprecated timezone identifiers."""
 
     ETC = "Etc/"
 
 
-class AllowedEtcTimezone(str, Enum):
+class AllowedEtcTimezone(StrEnum):
     """Allowed Etc/ timezones (not deprecated)."""
 
     UTC = "Etc/UTC"

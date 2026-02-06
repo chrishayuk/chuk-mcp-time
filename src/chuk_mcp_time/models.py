@@ -1,25 +1,25 @@
 """Pydantic models for the time MCP server."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class AccuracyMode(str, Enum):
+class AccuracyMode(StrEnum):
     """Accuracy mode for time queries."""
 
     FAST = "fast"  # Fewer sources, lower latency
     ACCURATE = "accurate"  # More sources, higher accuracy
 
 
-class ConsensusMethod(str, Enum):
+class ConsensusMethod(StrEnum):
     """Consensus calculation method."""
 
     MEDIAN_WITH_OUTLIER_REJECTION = "median_with_outlier_rejection"
     SYSTEM_FALLBACK = "system_fallback"
 
 
-class ClockStatus(str, Enum):
+class ClockStatus(StrEnum):
     """System clock status relative to trusted time."""
 
     OK = "ok"  # Delta < 100ms
@@ -27,7 +27,7 @@ class ClockStatus(str, Enum):
     ERROR = "error"  # Delta > 1000ms
 
 
-class NTPError(str, Enum):
+class NTPError(StrEnum):
     """NTP error types."""
 
     TIMEOUT = "timeout"
