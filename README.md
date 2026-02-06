@@ -4,8 +4,8 @@
 
 A Model Context Protocol (MCP) server that provides extremely accurate time information by querying multiple NTP servers, removing outliers, and computing a consensus time independent of the system clock. Now includes comprehensive timezone support using IANA tzdata for accurate timezone conversions, DST handling, and timezone discovery. Perfect for applications requiring trusted time sources, timezone conversions, detecting clock drift, or working in distributed systems.
 
-[![Test](https://github.com/chuk-ai/chuk-mcp-time/workflows/Test/badge.svg)](https://github.com/chuk-ai/chuk-mcp-time/actions)
-[![PyPI version](https://badge.fury.io/py/chuk-mcp-time.svg)](https://badge.fury.io/py/chuk-mcp-time)
+> This is a demonstration project provided as-is for learning and testing purposes.
+
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
 ## Features
@@ -30,7 +30,7 @@ A Model Context Protocol (MCP) server that provides extremely accurate time info
 
 ⚙️ **Configurable**: Environment-based configuration for NTP servers and consensus parameters
 
-🚀 **Production-Ready**: Docker support, GitHub Actions CI/CD, Fly.io deployment
+🚀 **Deployment Examples**: Docker support, GitHub Actions CI/CD, Fly.io deployment
 
 🌐 **Public Endpoint**: Try instantly at `https://time.chukai.io/mcp` - no installation needed!
 
@@ -68,7 +68,8 @@ pip install chuk-mcp-time
 #### From source
 
 ```bash
-git clone https://github.com/chuk-ai/chuk-mcp-time.git
+# Clone the repository
+git clone <repository-url>
 cd chuk-mcp-time
 make dev-install
 ```
@@ -460,7 +461,7 @@ All servers are stratum 1-2 for maximum accuracy.
 
 ```bash
 # Clone repository
-git clone https://github.com/chuk-ai/chuk-mcp-time.git
+git clone <repository-url>
 cd chuk-mcp-time
 
 # Install development dependencies
@@ -715,21 +716,11 @@ Contributions welcome! Please:
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details
+Apache License 2.0 - See LICENSE for details.
 
 ## Credits
 
 Built with:
-- [chuk-mcp-server](https://github.com/chuk-ai/chuk-mcp-server) - High-performance MCP server framework
+- chuk-mcp-server - High-performance MCP server framework
 - [Pydantic](https://pydantic.dev) - Data validation using Python type hints
 - NTP Pool Project servers
-
-## Support
-
-- 🐛 Issues: [GitHub Issues](https://github.com/chuk-ai/chuk-mcp-time/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/chuk-ai/chuk-mcp-time/discussions)
-- 📧 Email: chris@chuk.ai
-
----
-
-**Made with ❤️ by the Chuk AI team**

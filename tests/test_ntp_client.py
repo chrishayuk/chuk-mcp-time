@@ -1,7 +1,6 @@
 """Tests for NTP client."""
 
 import pytest
-
 from chuk_mcp_time.models import NTPError
 from chuk_mcp_time.ntp_client import NTPClient
 

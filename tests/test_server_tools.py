@@ -1,7 +1,6 @@
 """Tests for server integration (simpler approach)."""
 
 import pytest
-
 from chuk_mcp_time.config import get_config
 from chuk_mcp_time.consensus import TimeConsensusEngine
 from chuk_mcp_time.models import AccuracyMode

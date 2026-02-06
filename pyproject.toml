@@ -4,15 +4,12 @@ version = "1.1"
 description = "High-accuracy time oracle MCP server using NTP consensus and multiple time sources"
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [
-    { name = "Christopher Hay", email = "chrishayuk@somejunkmailbox.com" }
-]
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 keywords = ["mcp", "time", "ntp", "oracle", "consensus"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -40,10 +37,6 @@ dev = [
 [project.scripts]
 chuk-mcp-time = "chuk_mcp_time.server:main"
 
-[project.urls]
-Homepage = "https://github.com/chuk-ai/chuk-mcp-time"
-Repository = "https://github.com/chuk-ai/chuk-mcp-time"
-Issues = "https://github.com/chuk-ai/chuk-mcp-time/issues"
 
 [build-system]
 requires = ["hatchling"]

@@ -56,5 +56,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fly.io deployment ready
 - PyPI publishing workflow
 - Automated changelog generation
-
-[1.0.0]: https://github.com/chuk-ai/chuk-mcp-time/releases/tag/v1.0.0

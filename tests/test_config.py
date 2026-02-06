@@ -1,7 +1,6 @@
 """Tests for configuration."""
 
 import pytest
-
 from chuk_mcp_time.config import TimeServerConfig, load_config
 
 
