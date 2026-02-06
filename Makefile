@@ -1,8 +1,5 @@
 .PHONY: help clean clean-pyc clean-build clean-test clean-all install dev-install test test-cov coverage-report lint format typecheck security check docker-build docker-run build version bump-patch bump-minor bump-major publish publish-test publish-manual release
 
-# Detect if 'uv' is available for faster operations
-UV := $(shell command -v uv 2> /dev/null)
-
 help:
 	@echo "chuk-mcp-time - High-accuracy time oracle MCP server"
 	@echo ""
@@ -76,76 +73,92 @@ clean-all: clean
 
 # Development targets
 install:
-ifdef UV
-	@echo "Installing with uv..."
-	uv pip install .
-else
-	@echo "Installing with pip..."
-	pip install .
-endif
+	@if command -v uv >/dev/null 2>&1; then \
+		echo "Installing with uv..."; \
+		uv pip install .; \
+	else \
+		echo "Installing with pip..."; \
+		pip install .; \
+	fi
 
 dev-install:
-ifdef UV
-	@echo "Installing in editable mode with dev dependencies (using uv)..."
-	uv pip install -e ".[dev]"
-else
-	@echo "Installing in editable mode with dev dependencies (using pip)..."
-	pip install -e ".[dev]"
-endif
+	@if command -v uv >/dev/null 2>&1; then \
+		echo "Installing in editable mode with dev dependencies (using uv)..."; \
+		uv pip install -e ".[dev]"; \
+	else \
+		echo "Installing in editable mode with dev dependencies (using pip)..."; \
+		pip install -e ".[dev]"; \
+	fi
 
 test:
-ifdef UV
-	@echo "Running tests with uv..."
-	uv run pytest
-else
-	@echo "Running tests..."
-	pytest
-endif
+	@if command -v uv >/dev/null 2>&1; then \
+		echo "Running tests with uv..."; \
+		uv run pytest; \
+	else \
+		echo "Running tests..."; \
+		pytest; \
+	fi
 
 test-cov:
-ifdef UV
-	@echo "Running tests with coverage (using uv)..."
-	uv run pytest --cov=chuk_mcp_time --cov-report=html --cov-report=term-missing
-else
-	@echo "Running tests with coverage..."
-	pytest --cov=chuk_mcp_time --cov-report=html --cov-report=term-missing
-endif
+	@if command -v uv >/dev/null 2>&1; then \
+		echo "Running tests with coverage (using uv)..."; \
+		uv run pytest --cov=chuk_mcp_time --cov-report=html --cov-report=term-missing; \
+	else \
+		echo "Running tests with coverage..."; \
+		pytest --cov=chuk_mcp_time --cov-report=html --cov-report=term-missing; \
+	fi
 
 coverage-report:
 	@echo "Coverage report:"
-ifdef UV
-	uv run coverage report
-else
-	coverage report
-endif
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run coverage report; \
+	else \
+		coverage report; \
+	fi
 
 lint:
 	@echo "Running ruff checks..."
-	ruff check src/ tests/
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run ruff check src/ tests/; \
+	else \
+		ruff check src/ tests/; \
+	fi
 	@echo "Checking formatting..."
-	ruff format --check src/ tests/
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run ruff format --check src/ tests/; \
+	else \
+		ruff format --check src/ tests/; \
+	fi
 
 format:
 	@echo "Formatting code with ruff..."
-	ruff format src/ tests/
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run ruff format src/ tests/; \
+	else \
+		ruff format src/ tests/; \
+	fi
 	@echo "Fixing linting issues..."
-	ruff check --fix src/ tests/
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run ruff check --fix src/ tests/; \
+	else \
+		ruff check --fix src/ tests/; \
+	fi
 
 typecheck:
 	@echo "Running mypy type checking..."
-ifdef UV
-	uv run mypy src/
-else
-	mypy src/
-endif
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run mypy src/; \
+	else \
+		mypy src/; \
+	fi
 
 security:
 	@echo "Running bandit security checks..."
-ifdef UV
-	uv run bandit -r src/ -ll
-else
-	bandit -r src/ -ll
-endif
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run bandit -r src/ -ll; \
+	else \
+		bandit -r src/ -ll; \
+	fi
 
 check: lint typecheck security test
 	@echo "All checks passed!"
